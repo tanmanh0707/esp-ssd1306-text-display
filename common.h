@@ -19,5 +19,6 @@ size_t FS_FileSize(File &fs);
 size_t FS_Read(File &fs, char *data, size_t len);
 
 bool SCREEN_Init();
+void SCREEN_Clear();
 void SCREEN_Display();
 void SCREEN_DrawMultiLineText(String &text, uint32_t start_line = 0);

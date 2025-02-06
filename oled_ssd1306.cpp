@@ -34,6 +34,11 @@ void SCREEN_Display()
   _oled.display();
 }
 
+void SCREEN_Clear()
+{
+  _oled.clearDisplay();
+}
+
 void SCREEN_DrawMultiLineText(String &text, uint32_t start_line /* = 0 */)
 {
   _oled.clearDisplay();

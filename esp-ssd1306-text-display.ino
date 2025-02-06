@@ -10,6 +10,17 @@
 #include "common.h"
 #include "web_index.h"
 
+/* Button */
+#if defined(ESP32)
+#define BUTTON_PIN                    5
+#elif defined(ESP8266)
+#define BUTTON_PIN                    D5
+#endif
+
+/* SCREEN */
+#define SCREEN_OFF_TIME               3000  //ms
+#define WIFI_ON_TIME                  10000 //ms
+
 /* WIFI */
 #if defined(ESP32)
 #define WIFI_AP_SSID                  "ESP32 Access Point"
@@ -25,6 +36,8 @@
 AsyncWebServer _server(WEBSERVER_PORT);
 static String tempMsg = "";
 static bool _updateText = false;
+static bool _display = true;
+static bool _hold3s = false, _hold10s = false;
 
 void WIFI_Init();
 void handleSetMsg(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
@@ -32,8 +45,11 @@ void handleSetMsg(AsyncWebServerRequest *request, uint8_t *data, size_t len, siz
 void setup()
 {
   Serial.begin(115200);
+#if defined(ESP8266)
+  Serial.println("");
+#endif
   SCREEN_Init();
-  WIFI_Init();
+  Huma_Buttons.add(BUTTON_PIN);
 
   if (FS_Init())
   {
@@ -61,10 +77,47 @@ void setup()
 
 void loop()
 {
-  if (_updateText)
+  if (_display)
   {
-    _updateText = false;
-    SCREEN_DrawMultiLineText(tempMsg);
+    /* Update Text */
+    if (_updateText) {
+      _updateText = false;
+      SCREEN_DrawMultiLineText(tempMsg);
+    }
+
+    /* Turn on WiFi */
+    if (Huma_Buttons.hold(BUTTON_PIN, WIFI_ON_TIME)) {
+      _hold10s = true;
+    } else {
+      /* Turn off screen */
+      if (Huma_Buttons.hold(BUTTON_PIN, SCREEN_OFF_TIME)) {
+        _hold3s = true;
+      }
+    }
+
+    if (_hold10s) {
+      if (Huma_Buttons.clicked(BUTTON_PIN)) {
+        _hold3s = _hold10s = false;
+        Serial.println("Turn On WiFi");
+        WIFI_Init();
+      }
+    } else if (_hold3s) {
+      if (Huma_Buttons.clicked(BUTTON_PIN)) {
+        Serial.println("Screen OFF");
+        _display = false;
+        _hold3s = _hold10s = false;
+        SCREEN_Clear();
+        SCREEN_Display();
+      }
+    }
+  }
+  else  /* Screen is OFF */
+  {
+    if (Huma_Buttons.clicked(BUTTON_PIN)) {
+      Serial.println("Screen ON");
+      _display = true;
+      _updateText = true;
+    }
   }
 }
 
