@@ -19,9 +19,25 @@ bool SCREEN_Init()
 {
   bool ret = _oled.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
   if( ! ret) {
-    Serial.println(F("SSD1306 begin failed"));
+    Serial.println(F("SSD1306 begin failed!"));
   } else {
-    _oled.clearDisplay();
+    _oled.setTextSize(1);
+    _oled.setTextColor(SSD1306_WHITE);
+    _oled.cp437(true);
+    Serial.println(F("SSD1306 begin done!"));
   }
   return ret;
+}
+
+void SCREEN_Display()
+{
+  _oled.display();
+}
+
+void SCREEN_DrawMultiLineText(String &text, uint32_t start_line /* = 0 */)
+{
+  _oled.clearDisplay();
+  _oled.setCursor(0, 0);
+  _oled.print(text);
+  _oled.display();
 }

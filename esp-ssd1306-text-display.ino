@@ -20,8 +20,11 @@
 
 /* Web Server */
 #define WEBSERVER_PORT                80
+#define SPIFFS_FILENAME_MSG           "textdisplay"
 
 AsyncWebServer _server(WEBSERVER_PORT);
+static String tempMsg = "";
+static bool _updateText = false;
 
 void WIFI_Init();
 void handleSetMsg(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
@@ -31,19 +34,45 @@ void setup()
   Serial.begin(115200);
   SCREEN_Init();
   WIFI_Init();
-  Serial.printf("ESP SSD1306 Text Display Started!");
+
+  if (FS_Init())
+  {
+    File fd = FS_Open(SPIFFS_FILENAME_MSG, FS_OPEN_READ);
+    if (fd) {
+      size_t file_size = FS_FileSize(fd);
+      char *buffer = (char*)calloc(1, file_size + 1);
+      if (buffer) {
+        FS_Read(fd, buffer, file_size);
+        tempMsg = String(buffer);
+        _updateText = true;
+        Serial.printf("Read from FS: %s\n", tempMsg.c_str());
+      } else { Serial.println("Allocate memory failed!"); }
+
+      FS_Close(fd);
+    } else { Serial.println("Open file failed!"); }
+  }
+
+  Serial.println("ESP SSD1306 Text Display Started!");
+
+  if (! _updateText) {
+    SCREEN_Display();
+  }
 }
 
 void loop()
 {
-  
+  if (_updateText)
+  {
+    _updateText = false;
+    SCREEN_DrawMultiLineText(tempMsg);
+  }
 }
 
 void WIFI_AccessPoint()
 {
   WiFi.mode(WIFI_AP);
   WiFi.softAP(WIFI_AP_SSID, WIFI_AP_PASSWORD);
-  Serial.printf("WiFi Access Point started! SSID: %s - Password: %s\n", WIFI_AP_SSID, WIFI_AP_PASSWORD);
+  Serial.printf("WiFi Access Point Started! SSID: %s - Password: %s\n", WIFI_AP_SSID, WIFI_AP_PASSWORD);
 }
 
 void WIFI_Init()
@@ -69,24 +98,28 @@ void WIFI_Init()
 void handleSetMsg(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   if(!index) {
-    Serial.printf("BodyStart: %u", total);
-//    request->_tempFile = SPIFFS.open(SPIFFS_FILENAME_MSG, FILE_WRITE);
-//    if (!request->_tempFile) {
-//      Serial.printf("Open file %s error!\n", SPIFFS_FILENAME_MSG);
-//    }
+    Serial.printf("BodyStart: %u\n", total);
+    tempMsg = "";
   }
 
   if (len) {
-//    ESP_LOGI(LOG_WEB, "(%d) %s", index, (const char*)data);
-//    if (request->_tempFile) {
-//      request->_tempFile.write(data, len);
-//    }
+    char *buff = (char *)calloc(1, len + 1);
+    if (buff) {
+      memcpy(buff, data, len);
+      tempMsg += String(buff);
+      free(buff);
+    }
   }
   
-//  if (index + len >= total) {
-//    if (request->_tempFile) {
-//      request->_tempFile.close();
-//    }
-//    Serial.printf("BodyEnd: %u\n", total);
-//  }
+  if (index + len >= total) {
+    Serial.printf("BodyEnd: %u - %s\n", total, tempMsg.c_str());
+    File fd = FS_Open(SPIFFS_FILENAME_MSG, FS_OPEN_WRITE);
+    if (fd) {
+      FS_Write(fd, tempMsg.c_str(), tempMsg.length());
+      FS_Close(fd);
+    } else {
+      Serial.println("Open file failed!");
+    }
+    _updateText = true;
+  }
 }
