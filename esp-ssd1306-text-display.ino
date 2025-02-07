@@ -35,6 +35,7 @@
 
 AsyncWebServer _server(WEBSERVER_PORT);
 static String tempMsg = "";
+static int _startLine = 0;
 static bool _updateText = false;
 static bool _display = true;
 static bool _hold3s = false, _hold10s = false;
@@ -79,8 +80,30 @@ void loop()
 {
   if (_display)
   {
+    if (!_hold3s && !_hold10s && Huma_Buttons.clicked(BUTTON_PIN)) {
+      unsigned long long ltime = millis();
+      bool doubleclicked = false;
+      while (millis() - ltime < 200) {
+        if (Huma_Buttons.clicked(BUTTON_PIN)) {
+          doubleclicked = true;
+        }
+        yield();
+      }
+
+      if (doubleclicked) {
+        if (_startLine > 0) {
+          _startLine--;
+        }
+      } else {
+        _startLine++;
+      }
+
+      SCREEN_DrawMultiLineText(tempMsg, _startLine);
+    }
+
     /* Update Text */
     if (_updateText) {
+      _startLine = 0;
       _updateText = false;
       SCREEN_DrawMultiLineText(tempMsg);
     }
