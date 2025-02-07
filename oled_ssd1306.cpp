@@ -63,7 +63,6 @@ void SCREEN_SplitTextByLines(String &text, std::vector<String> &line_list, bool 
   }
 
   _oled.getTextBounds("My", 0, 0, &x1, &y1, &w, &text_h);
-  Serial.printf("Text_h: %d\n", text_h);
 
   for (int i = 0; i < len; i++) {
     if (text[i] != ' ') {
@@ -81,6 +80,9 @@ void SCREEN_SplitTextByLines(String &text, std::vector<String> &line_list, bool 
       }
     }
   }
+
+  line += tmp_word;
+  line_list.push_back(line);
 }
 
 void SCREEN_DrawTextByLine(std::vector<String> &lines, uint32_t start_line /* = 0 */)
